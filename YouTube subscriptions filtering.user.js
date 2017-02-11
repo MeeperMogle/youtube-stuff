@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        YouTube subscriptions filtering
-// @version     1.0
+// @version     1.1
 // @author      MeeperMogle
 // @description Ability to filter videos on the (Grid) Subscriptions page of YouTube.
 // @source      https://github.com/MeeperMogle/youtube-subscriptions-filtering
@@ -174,6 +174,21 @@ function applyFiltering() {
     }
     $('.load-more-button').click(function() {
         setTimeout(applyFiltering, 1500);
+    });
+
+    // For the List view, remove uploader-rows that are now empty
+    // Skip the first one, as there are settings placed there for some reason
+    $('#browse-items-primary > ol > li:gt(0)').each(function() {
+        if ($(this).find('div.yt-lockup-video').length === 0) {
+            $(this).remove();
+        }
+    });
+
+    // For the first one, just remove the name if it's empty
+    $('#browse-items-primary > ol > li:eq(0)').each(function() {
+        if ($(this).find('div.yt-lockup-video').length === 0) {
+            $(this).find('h2').remove();
+        }
     });
 }
 
