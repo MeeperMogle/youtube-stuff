@@ -7,6 +7,8 @@ Note: Uncertain about how the script works with long videos that have multiple v
 # Custom player size
 Set the exact width and height of the video player in pixels.
 
+WARNING: Currently breaks fullscreen view.
+
 
 # Playlist total time
 Counts and displays the total time of a playlist on the playlist page.
