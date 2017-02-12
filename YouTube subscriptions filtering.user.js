@@ -3,7 +3,7 @@
 // @version     1.1
 // @author      MeeperMogle
 // @description Ability to filter videos on the (Grid) Subscriptions page of YouTube.
-// @source      https://github.com/MeeperMogle/youtube-subscriptions-filtering
+// @source      https://github.com/MeeperMogle/youtube-stuff
 // @match       http*://www.youtube.com/feed/subscriptions*
 // @grant       GM_setValue
 // @grant       GM_getValue
@@ -25,7 +25,7 @@ function loadSettings() {
     // Avoid crash on value unset
     try {
         videoFiltering = JSON.parse(GM_getValue(storageString));
-    } catch(e) {}
+    } catch (e) {}
 }
 
 loadSettings();
@@ -53,29 +53,29 @@ function findParentElement(element, targetSelector) {
     return element.is(targetSelector) ? element : findParentElement(element.parent(), targetSelector);
 }
 
-$('#guide-channels').prepend('Video filtering; all channels <span id=export title=Export>[&gt;</span> <span id=import title=Import>[&lt;</span><br><textarea id=filterAllChannels style="width:97%;">'+videoFiltering.all.join('\n')+'</textarea>' +
-                             '<span id=stringifiedArea style="display:none;"><br>Cut this text out<br><textarea id=stringifiedSettings></textarea></span>' +
-                             '<br>Hide watched <input type=checkbox id=hideWatched>' +
-                             '<br><br>Per-channel filters <input type=checkbox id=showPerChannel>');
+$('#guide-channels').prepend('Video filtering; all channels <span id=export title=Export>[&gt;</span> <span id=import title=Import>[&lt;</span><br><textarea id=filterAllChannels style="width:97%;">' + videoFiltering.all.join('\n') + '</textarea>' +
+    '<span id=stringifiedArea style="display:none;"><br>Cut this text out<br><textarea id=stringifiedSettings></textarea></span>' +
+    '<br>Hide watched <input type=checkbox id=hideWatched>' +
+    '<br><br>Per-channel filters <input type=checkbox id=showPerChannel>');
 
 $('#export, #import').css('cursor', 'pointer');
 
-$('#export').click(function(){
+$('#export').click(function () {
     $('#stringifiedArea').show();
     $('#stringifiedSettings').val(JSON.stringify(videoFiltering));
-    $('#stringifiedSettings').keyup(function(){
+    $('#stringifiedSettings').keyup(function () {
         if ($(this).val() === '') {
             $('#stringifiedArea').hide();
         }
     });
 });
-$('#import').click(function(){
+$('#import').click(function () {
     const importSettings = prompt('Paste settings, then refresh the page');
     const oldSettings = videoFiltering;
 
     try {
         videoFiltering = JSON.parse(importSettings);
-    } catch(e) {
+    } catch (e) {
         alert('Error occurred; keeping original settings...\n' + e);
         videoFiltering = oldSettings;
     }
@@ -83,7 +83,7 @@ $('#import').click(function(){
 
 
 // Update global settings on writing
-$('#filterAllChannels').keyup(function() {
+$('#filterAllChannels').keyup(function () {
     videoFiltering.all = $(this).val().split('\n').filter(s => s.length > 0).sort();
 });
 
@@ -92,7 +92,7 @@ $('#hideWatched').prop('checked', videoFiltering.hideWatched);
 
 // Load subscribed channels from left sidebar
 $('.guide-sort-container').hide();
-$('#guide-channels .guide-channel').each(function() {
+$('#guide-channels .guide-channel').each(function () {
     // Store by ID
     const id = $(this).attr('id').replace('-guide-item', '');
 
@@ -107,31 +107,31 @@ $('#guide-channels .guide-channel').each(function() {
         };
     }
 
-    $(this).append('<span class=perChannelArea><textarea class=filterList id="filterList_'+id+'">'+videoFiltering.channel[id].filters.join('\n')+'</textarea></span>');
+    $(this).append('<span class=perChannelArea><textarea class=filterList id="filterList_' + id + '">' + videoFiltering.channel[id].filters.join('\n') + '</textarea></span>');
     $(this).css('margin-top', '10px');
     $(this).css('max-height', '100px');
 
     // Update current channel settings on writing
-    $('#filterList_'+id).keyup(function() {
+    $('#filterList_' + id).keyup(function () {
         videoFiltering.channel[id].filters = $(this).val().split('\n').filter(s => s.length > 0).sort();
     });
 });
 
-$('.filterList').keyup(function() {
+$('.filterList').keyup(function () {
 
 });
 
-$('#showPerChannel').click(function() {
+$('#showPerChannel').click(function () {
     videoFiltering.perChannelActivated = !videoFiltering.perChannelActivated;
     $('.perChannelArea').css('display', videoFiltering.perChannelActivated ? 'block' : 'none');
 });
-$('#hideWatched').click(function() {
+$('#hideWatched').click(function () {
     videoFiltering.hideWatched = !videoFiltering.hideWatched;
 });
 
 $('.perChannelArea').css('display', videoFiltering.perChannelActivated ? 'block' : 'none');
 
-window.onbeforeunload = function() {
+window.onbeforeunload = function () {
     // Save current state of the filter settings
     saveSettings();
 };
@@ -139,7 +139,7 @@ window.onbeforeunload = function() {
 function applyFiltering() {
     // Remove watched videos
     if (videoFiltering.hideWatched) {
-        $('.resume-playback-background').each(function() {
+        $('.resume-playback-background').each(function () {
             findParentElement($(this), 'div.yt-lockup-video').parent().remove();
         });
     }
@@ -148,7 +148,7 @@ function applyFiltering() {
     videoFiltering.all.forEach(word => {
         const re = new RegExp(word, 'i');
 
-        $('h3.yt-lockup-title a').each(function() {
+        $('h3.yt-lockup-title a').each(function () {
             if ($(this).text().match(re) !== null) {
                 findParentElement($(this), 'div.yt-lockup-video').parent().remove();
             }
@@ -162,8 +162,8 @@ function applyFiltering() {
             channel.filters.forEach(word => {
                 const re = new RegExp(word, 'i');
 
-                $('.yt-lockup-byline:contains('+channel.name+')').each(function() {
-                    $(this).parent().find('h3.yt-lockup-title a').each(function() {
+                $('.yt-lockup-byline:contains(' + channel.name + ')').each(function () {
+                    $(this).parent().find('h3.yt-lockup-title a').each(function () {
                         if ($(this).text().match(re) !== null) {
                             findParentElement($(this), 'div.yt-lockup-video').parent().remove();
                         }
@@ -172,20 +172,20 @@ function applyFiltering() {
             });
         });
     }
-    $('.load-more-button').click(function() {
+    $('.load-more-button').click(function () {
         setTimeout(applyFiltering, 1500);
     });
 
     // For the List view, remove uploader-rows that are now empty
     // Skip the first one, as there are settings placed there for some reason
-    $('#browse-items-primary > ol > li:gt(0)').each(function() {
+    $('#browse-items-primary > ol > li:gt(0)').each(function () {
         if ($(this).find('div.yt-lockup-video').length === 0) {
             $(this).remove();
         }
     });
 
     // For the first one, just remove the name if it's empty
-    $('#browse-items-primary > ol > li:eq(0)').each(function() {
+    $('#browse-items-primary > ol > li:eq(0)').each(function () {
         if ($(this).find('div.yt-lockup-video').length === 0) {
             $(this).find('h2').remove();
         }
