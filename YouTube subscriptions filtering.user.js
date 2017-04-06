@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        YouTube subscriptions filtering
-// @version     1.1
+// @version     1.2
 // @author      MeeperMogle
 // @description Ability to filter videos on the (Grid) Subscriptions page of YouTube.
 // @source      https://github.com/MeeperMogle/youtube-stuff
@@ -135,6 +135,10 @@ window.onbeforeunload = function () {
     // Save current state of the filter settings
     saveSettings();
 };
+$(window).bind('beforeunload', function(){
+  // Save current state of the filter settings
+    saveSettings();
+});
 
 function applyFiltering() {
     // Remove watched videos
@@ -193,3 +197,4 @@ function applyFiltering() {
 }
 
 setTimeout(applyFiltering, 1000);
+setTimeout(applyFiltering, 10000);
