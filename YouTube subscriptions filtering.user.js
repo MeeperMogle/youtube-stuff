@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        YouTube subscriptions filtering
-// @version     1.2
+// @version     1.3
 // @author      MeeperMogle
 // @description Ability to filter videos on the (Grid) Subscriptions page of YouTube.
 // @source      https://github.com/MeeperMogle/youtube-stuff
@@ -53,123 +53,143 @@ function findParentElement(element, targetSelector) {
     return element.is(targetSelector) ? element : findParentElement(element.parent(), targetSelector);
 }
 
-$('#guide-channels').prepend('Video filtering; all channels <span id=export title=Export>[&gt;</span> <span id=import title=Import>[&lt;</span><br><textarea id=filterAllChannels style="width:97%;">' + videoFiltering.all.join('\n') + '</textarea>' +
-    '<span id=stringifiedArea style="display:none;"><br>Cut this text out<br><textarea id=stringifiedSettings></textarea></span>' +
-    '<br>Hide watched <input type=checkbox id=hideWatched>' +
-    '<br><br>Per-channel filters <input type=checkbox id=showPerChannel>');
-
-$('#export, #import').css('cursor', 'pointer');
-
-$('#export').click(function () {
-    $('#stringifiedArea').show();
-    $('#stringifiedSettings').val(JSON.stringify(videoFiltering));
-    $('#stringifiedSettings').keyup(function () {
-        if ($(this).val() === '') {
-            $('#stringifiedArea').hide();
-        }
-    });
-});
-$('#import').click(function () {
-    const importSettings = prompt('Paste settings, then refresh the page');
-    const oldSettings = videoFiltering;
-
+const baseControlsInterval = setInterval(function() {
     try {
-        videoFiltering = JSON.parse(importSettings);
+        document.getElementsByClassName('ytd-guide-subscriptions-section-renderer')[0].innerHTML +=
+            'Video filtering; all channels <span id=export title=Export>[&gt;</span> <span id=import title=Import>[&lt;</span><br><textarea id=filterAllChannels style="width:97%;">' +
+            videoFiltering.all.join('\n') + '</textarea>' +
+            '<span id=stringifiedArea style="display:none;"><br>Cut this text out<br><textarea id=stringifiedSettings></textarea></span>' +
+            '<br>Hide watched <input type=checkbox id=hideWatched>' +
+            '<br><br>Per-channel filters <input type=checkbox id=showPerChannel>';
+
+
+        $('#export, #import').css('cursor', 'pointer');
+
+        $('#export').click(function () {
+            $('#stringifiedArea').show();
+            $('#stringifiedSettings').val(JSON.stringify(videoFiltering));
+            $('#stringifiedSettings').keyup(function () {
+                if ($(this).val() === '') {
+                    $('#stringifiedArea').hide();
+                }
+            });
+        });
+        $('#import').click(function () {
+            const importSettings = prompt('Paste settings, then refresh the page');
+            const oldSettings = videoFiltering;
+
+            try {
+                videoFiltering = JSON.parse(importSettings);
+            } catch (e) {
+                alert('Error occurred; keeping original settings...\n' + e);
+                videoFiltering = oldSettings;
+            }
+        });
+
+
+        // Update global settings on writing
+        $('#filterAllChannels').keyup(function () {
+            videoFiltering.all = $(this).val().split('\n').filter(s => s.length > 0).sort();
+        });
+
+        $('#showPerChannel').prop('checked', videoFiltering.perChannelActivated);
+        $('#hideWatched').prop('checked', videoFiltering.hideWatched);
+
+        clearInterval(baseControlsInterval);
+
+
     } catch (e) {
-        alert('Error occurred; keeping original settings...\n' + e);
-        videoFiltering = oldSettings;
-    }
-});
 
-
-// Update global settings on writing
-$('#filterAllChannels').keyup(function () {
-    videoFiltering.all = $(this).val().split('\n').filter(s => s.length > 0).sort();
-});
-
-$('#showPerChannel').prop('checked', videoFiltering.perChannelActivated);
-$('#hideWatched').prop('checked', videoFiltering.hideWatched);
-
-// Load subscribed channels from left sidebar
-$('.guide-sort-container').hide();
-$('#guide-channels .guide-channel').each(function () {
-    // Store by ID
-    const id = $(this).attr('id').replace('-guide-item', '');
-
-    // Filter name
-    // Note: What happens on a change...?
-    const user = $(this).find('.display-name span').text().replace(/(  +|\n)/g, '');
-
-    if (!videoFiltering.channel[id]) {
-        videoFiltering.channel[id] = {
-            name: user,
-            filters: [],
-        };
     }
 
-    $(this).append('<span class=perChannelArea><textarea class=filterList id="filterList_' + id + '">' + videoFiltering.channel[id].filters.join('\n') + '</textarea></span>');
-    $(this).css('margin-top', '10px');
-    $(this).css('max-height', '100px');
+    // Load subscribed channels from left sidebar
+    document.querySelectorAll('.ytd-guide-subscriptions-section-renderer #endpoint').forEach(function (el) {
+        return;
+        console.log($(el));
+        // Store by ID
+        const id = el.id.replace('-guide-item', '');
+        console.log(id);
 
-    // Update current channel settings on writing
-    $('#filterList_' + id).keyup(function () {
-        videoFiltering.channel[id].filters = $(this).val().split('\n').filter(s => s.length > 0).sort();
+        // Filter name
+        // Note: What happens on a change...?
+        const user = $(el).find('.display-name span').text().replace(/(  +|\n)/g, '');
+
+        if (!videoFiltering.channel[id]) {
+            videoFiltering.channel[id] = {
+                name: user,
+                filters: [],
+            };
+        }
+
+        $(el).append('<span class=perChannelArea><textarea class=filterList id="filterList_' + id + '">' + videoFiltering.channel[id].filters.join('\n') + '</textarea></span>');
+        $(el).css('margin-top', '10px');
+        $(el).css('max-height', '100px');
+
+        // Update current channel settings on writing
+        $('#filterList_' + id).keyup(function () {
+            videoFiltering.channel[id].filters = $(el).val().split('\n').filter(s => s.length > 0).sort();
+        });
     });
-});
 
-$('.filterList').keyup(function () {
+    $('#showPerChannel').click(function () {
+        videoFiltering.perChannelActivated = !videoFiltering.perChannelActivated;
+        $('.perChannelArea').css('display', videoFiltering.perChannelActivated ? 'block' : 'none');
+    });
+    $('#hideWatched').click(function () {
+        videoFiltering.hideWatched = !videoFiltering.hideWatched;
+    });
 
-});
-
-$('#showPerChannel').click(function () {
-    videoFiltering.perChannelActivated = !videoFiltering.perChannelActivated;
     $('.perChannelArea').css('display', videoFiltering.perChannelActivated ? 'block' : 'none');
-});
-$('#hideWatched').click(function () {
-    videoFiltering.hideWatched = !videoFiltering.hideWatched;
-});
 
-$('.perChannelArea').css('display', videoFiltering.perChannelActivated ? 'block' : 'none');
-
-window.onbeforeunload = function () {
-    // Save current state of the filter settings
-    saveSettings();
-};
-$(window).bind('beforeunload', function(){
-  // Save current state of the filter settings
-    saveSettings();
-});
+    window.onbeforeunload = function () {
+        // Save current state of the filter settings
+        saveSettings();
+    };
+    $(window).bind('beforeunload', function(){
+        // Save current state of the filter settings
+        saveSettings();
+    });
+}, 1500);
 
 function applyFiltering() {
     // Remove watched videos
     if (videoFiltering.hideWatched) {
-        $('.resume-playback-background').each(function () {
-            findParentElement($(this), 'div.yt-lockup-video').parent().remove();
+        console.group("Hide watched...");
+        document.querySelectorAll('#progress').forEach(function (el) {
+            let parentElement = findParentElement($(el), 'ytd-grid-video-renderer.ytd-grid-renderer');
+            console.log(parentElement.text().replace(/  +|\n|\d\d?:\d?\d|Watch later|WATCHED|\d[^ ]+ views.+|Verified/g, ""));
+            parentElement.remove();
         });
+        console.groupEnd();
     }
 
     // Remove all that has title matched by all-channels-filters
+    console.group("Hide global...");
     videoFiltering.all.forEach(word => {
         const re = new RegExp(word, 'i');
 
-        $('h3.yt-lockup-title a').each(function () {
-            if ($(this).text().match(re) !== null) {
-                findParentElement($(this), 'div.yt-lockup-video').parent().remove();
+        document.querySelectorAll('#video-title').forEach(function (el) {
+            if ($(el).text().match(re) !== null) {
+                console.log($(el).text() + "[" + word + "]");
+                findParentElement($(el), 'ytd-grid-video-renderer.ytd-grid-renderer').remove();
             }
         });
     });
+    console.groupEnd();
 
-    if (videoFiltering.perChannelActivated) {
+    if (false && videoFiltering.perChannelActivated) {
         // Remove all that has a title matched by specific-channel-filters
         Object.keys(videoFiltering.channel).forEach(channelId => {
             const channel = videoFiltering.channel[channelId];
+
             channel.filters.forEach(word => {
                 const re = new RegExp(word, 'i');
 
-                $('.yt-lockup-byline:contains(' + channel.name + ')').each(function () {
-                    $(this).parent().find('h3.yt-lockup-title a').each(function () {
-                        if ($(this).text().match(re) !== null) {
-                            findParentElement($(this), 'div.yt-lockup-video').parent().remove();
+                document.querySelectorAll('#byline a').forEach(function (el) {
+                    findParentElement($(el), '#meta').find('#video-title').each(function () {
+                        if ($(el).text().match(re) !== null) {
+                            console.log($(el).text());
+                            findParentElement($(el), 'ytd-grid-video-renderer.ytd-grid-renderer').remove();
                         }
                     });
                 });
@@ -196,5 +216,5 @@ function applyFiltering() {
     });
 }
 
-setTimeout(applyFiltering, 1000);
-setTimeout(applyFiltering, 10000);
+setInterval(applyFiltering, 1000);
+//setTimeout(applyFiltering, 10000);
