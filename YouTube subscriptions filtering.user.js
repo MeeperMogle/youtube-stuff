@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        YouTube subscriptions filtering
-// @version     1.3
+// @version     1.4
 // @author      MeeperMogle
 // @description Ability to filter videos on the (Grid) Subscriptions page of YouTube.
 // @source      https://github.com/MeeperMogle/youtube-stuff
@@ -16,6 +16,11 @@ $('button.yt-uix-load-more').removeAttr('data-scrolldetect-callback');
 
 const storageString = "YouTubeSubFilteringV1.0Storage";
 let videoFiltering;
+
+$('<div><input type=submit value="Filters" id="filtersToggle" style="border-radius: 25%; margin: 35px; padding: 5px; text-color: white; background-color: red;"></div>').insertAfter('#logo');
+$('#filtersToggle').click(function() {
+    $('#filtersPopup').toggle();
+});
 
 function saveSettings() {
     GM_setValue(storageString, JSON.stringify(videoFiltering));
@@ -33,11 +38,11 @@ loadSettings();
 if (!videoFiltering) {
     console.log("No local settings found, setting defaults...");
     videoFiltering = {
-        all: ['crencast', 'zelda'],
+        all: ['stoopudz', 'naughtfun'],
         channel: {
-            'UC_ufxdQbKBrrMOiZ4LzrUyA': {
-                name: 'PressHeartToContinue',
-                filters: ['anime', 'anime newz'],
+            'UC_ufxdQbKBrrMOiZ4A': {
+                name: 'DoesntExist',
+                filters: ['first', 'second'],
             },
         },
         hideWatched: true,
@@ -47,20 +52,28 @@ if (!videoFiltering) {
     saveSettings();
 }
 
+console.log(videoFiltering);
+
 // Recursively find (and return) the first parent that matches the given selector
 // Note: Requires jQuery.parent()
 function findParentElement(element, targetSelector) {
     return element.is(targetSelector) ? element : findParentElement(element.parent(), targetSelector);
 }
 
+
 const baseControlsInterval = setInterval(function() {
     try {
-        document.getElementsByClassName('ytd-guide-subscriptions-section-renderer')[0].innerHTML +=
+        $('h3.ytd-guide-section-renderer:eq(2) ~ #items #expander-item').click();
+        $('#container').append(
+            '<div id="filtersPopup" style="width: 500px; height: 500px; background-color: gray; position: absolute; top: 200px; padding: 25px; color: white; font-size: 15px; overflow: scroll;">' +
             'Video filtering; all channels <span id=export title=Export>[&gt;</span> <span id=import title=Import>[&lt;</span><br><textarea id=filterAllChannels style="width:97%;">' +
             videoFiltering.all.join('\n') + '</textarea>' +
             '<span id=stringifiedArea style="display:none;"><br>Cut this text out<br><textarea id=stringifiedSettings></textarea></span>' +
             '<br>Hide watched <input type=checkbox id=hideWatched>' +
-            '<br><br>Per-channel filters <input type=checkbox id=showPerChannel>';
+            '<br><br>Per-channel filters <input type=checkbox id=showPerChannel>' +
+            '<div class="perChannelArea"></div>' +
+            '</div>');
+        $('#filtersPopup').hide();
 
 
         $('#export, #import').css('cursor', 'pointer');
@@ -96,23 +109,26 @@ const baseControlsInterval = setInterval(function() {
         $('#hideWatched').prop('checked', videoFiltering.hideWatched);
 
         clearInterval(baseControlsInterval);
-
-
     } catch (e) {
-
+        console.log(e);
     }
 
     // Load subscribed channels from left sidebar
-    document.querySelectorAll('.ytd-guide-subscriptions-section-renderer #endpoint').forEach(function (el) {
-        return;
-        console.log($(el));
-        // Store by ID
-        const id = el.id.replace('-guide-item', '');
-        console.log(id);
-
+    $('h3.ytd-guide-section-renderer:eq(2) ~ #items #endpoint').each(function () {
         // Filter name
-        // Note: What happens on a change...?
-        const user = $(el).find('.display-name span').text().replace(/(  +|\n)/g, '');
+        const user = $(this).attr('title');
+
+        let id;
+        try {
+            // Store by ID
+            id = $(this).attr('href').replace('/channel/', '');
+        } catch (e) {
+            return;
+        }
+
+        if (user == 'Browse channels') {
+            return;
+        }
 
         if (!videoFiltering.channel[id]) {
             videoFiltering.channel[id] = {
@@ -121,15 +137,16 @@ const baseControlsInterval = setInterval(function() {
             };
         }
 
-        $(el).append('<span class=perChannelArea><textarea class=filterList id="filterList_' + id + '">' + videoFiltering.channel[id].filters.join('\n') + '</textarea></span>');
-        $(el).css('margin-top', '10px');
-        $(el).css('max-height', '100px');
+        $('.perChannelArea').append('<hr>' + user + '<br><textarea class=filterList style="width:97%;" id="filterList_' + id + '">' + videoFiltering.channel[id].filters.join('\n') + '</textarea>');
+        $('.perChannelArea').css('margin-top', '10px');
+        $('.perChannelArea').css('max-height', '100px');
 
         // Update current channel settings on writing
         $('#filterList_' + id).keyup(function () {
-            videoFiltering.channel[id].filters = $(el).val().split('\n').filter(s => s.length > 0).sort();
+            videoFiltering.channel[id].filters = $('#filterList_' + id).val().split('\n').filter(s => s.length > 0).sort();
         });
     });
+
 
     $('#showPerChannel').click(function () {
         videoFiltering.perChannelActivated = !videoFiltering.perChannelActivated;
@@ -154,30 +171,24 @@ const baseControlsInterval = setInterval(function() {
 function applyFiltering() {
     // Remove watched videos
     if (videoFiltering.hideWatched) {
-        console.group("Hide watched...");
         document.querySelectorAll('#progress').forEach(function (el) {
             let parentElement = findParentElement($(el), 'ytd-grid-video-renderer.ytd-grid-renderer');
-            console.log(parentElement.text().replace(/  +|\n|\d\d?:\d?\d|Watch later|WATCHED|\d[^ ]+ views.+|Verified/g, ""));
             parentElement.remove();
         });
-        console.groupEnd();
     }
 
     // Remove all that has title matched by all-channels-filters
-    console.group("Hide global...");
     videoFiltering.all.forEach(word => {
         const re = new RegExp(word, 'i');
 
         document.querySelectorAll('#video-title').forEach(function (el) {
             if ($(el).text().match(re) !== null) {
-                console.log($(el).text() + "[" + word + "]");
                 findParentElement($(el), 'ytd-grid-video-renderer.ytd-grid-renderer').remove();
             }
         });
     });
-    console.groupEnd();
 
-    if (false && videoFiltering.perChannelActivated) {
+    if (videoFiltering.perChannelActivated) {
         // Remove all that has a title matched by specific-channel-filters
         Object.keys(videoFiltering.channel).forEach(channelId => {
             const channel = videoFiltering.channel[channelId];
@@ -186,12 +197,13 @@ function applyFiltering() {
                 const re = new RegExp(word, 'i');
 
                 document.querySelectorAll('#byline a').forEach(function (el) {
-                    findParentElement($(el), '#meta').find('#video-title').each(function () {
-                        if ($(el).text().match(re) !== null) {
-                            console.log($(el).text());
-                            findParentElement($(el), 'ytd-grid-video-renderer.ytd-grid-renderer').remove();
-                        }
-                    });
+                    if ($(el).text() == channel.name) {
+                        findParentElement($(el), '#meta').find('#video-title').each(function () {
+                            if ($(this).text().match(re) !== null) {
+                                findParentElement($(el), 'ytd-grid-video-renderer.ytd-grid-renderer').remove();
+                            }
+                        });
+                    }
                 });
             });
         });
@@ -218,3 +230,5 @@ function applyFiltering() {
 
 setInterval(applyFiltering, 1000);
 //setTimeout(applyFiltering, 10000);
+
+
