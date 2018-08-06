@@ -174,7 +174,6 @@ const baseControlsInterval = setInterval(function() {
 function applyFiltering() {
     // Remove watched videos
     if (videoFiltering.hideWatched) {
-        console.log('Hiding watched');
         document.querySelectorAll('#progress').forEach(function (el) {
             let parentElement = findParentElement($(el), 'ytd-grid-video-renderer.ytd-grid-renderer');
             if (parentElement) {
@@ -184,7 +183,6 @@ function applyFiltering() {
     }
 
     // Remove all that has title matched by all-channels-filters
-    console.log('Hiding filters');
     videoFiltering.all.forEach(word => {
         const re = new RegExp(word, 'i');
 
@@ -199,7 +197,6 @@ function applyFiltering() {
     });
 
     if (videoFiltering.perChannelActivated) {
-        console.log('Hiding per-channel filters');
         // Remove all that has a title matched by specific-channel-filters
         Object.keys(videoFiltering.channel).forEach(channelId => {
             const channel = videoFiltering.channel[channelId];
