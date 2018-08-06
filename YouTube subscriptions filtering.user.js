@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        YouTube subscriptions filtering
-// @version     1.4
+// @version     1.5
 // @author      MeeperMogle
 // @description Ability to filter videos on the (Grid) Subscriptions page of YouTube.
 // @source      https://github.com/MeeperMogle/youtube-stuff
@@ -57,6 +57,9 @@ console.log(videoFiltering);
 // Recursively find (and return) the first parent that matches the given selector
 // Note: Requires jQuery.parent()
 function findParentElement(element, targetSelector) {
+    if (element.is('body')) {
+        return null;
+    }
     return element.is(targetSelector) ? element : findParentElement(element.parent(), targetSelector);
 }
 
@@ -171,24 +174,32 @@ const baseControlsInterval = setInterval(function() {
 function applyFiltering() {
     // Remove watched videos
     if (videoFiltering.hideWatched) {
+        console.log('Hiding watched');
         document.querySelectorAll('#progress').forEach(function (el) {
             let parentElement = findParentElement($(el), 'ytd-grid-video-renderer.ytd-grid-renderer');
-            parentElement.remove();
+            if (parentElement) {
+                parentElement.remove();
+            }
         });
     }
 
     // Remove all that has title matched by all-channels-filters
+    console.log('Hiding filters');
     videoFiltering.all.forEach(word => {
         const re = new RegExp(word, 'i');
 
         document.querySelectorAll('#video-title').forEach(function (el) {
             if ($(el).text().match(re) !== null) {
-                findParentElement($(el), 'ytd-grid-video-renderer.ytd-grid-renderer').remove();
+                let parentElement = findParentElement($(el), 'ytd-grid-video-renderer.ytd-grid-renderer');
+                if (parentElement) {
+                    parentElement.remove();
+                }
             }
         });
     });
 
     if (videoFiltering.perChannelActivated) {
+        console.log('Hiding per-channel filters');
         // Remove all that has a title matched by specific-channel-filters
         Object.keys(videoFiltering.channel).forEach(channelId => {
             const channel = videoFiltering.channel[channelId];
@@ -200,7 +211,10 @@ function applyFiltering() {
                     if ($(el).text() == channel.name) {
                         findParentElement($(el), '#meta').find('#video-title').each(function () {
                             if ($(this).text().match(re) !== null) {
-                                findParentElement($(el), 'ytd-grid-video-renderer.ytd-grid-renderer').remove();
+                                let parentElement = findParentElement($(el), 'ytd-grid-video-renderer.ytd-grid-renderer');
+                                if (parentElement) {
+                                    parentElement.remove();
+                                }
                             }
                         });
                     }
@@ -208,9 +222,6 @@ function applyFiltering() {
             });
         });
     }
-    $('.load-more-button').click(function () {
-        setTimeout(applyFiltering, 1500);
-    });
 
     // For the List view, remove uploader-rows that are now empty
     // Skip the first one, as there are settings placed there for some reason
@@ -230,5 +241,8 @@ function applyFiltering() {
 
 setInterval(applyFiltering, 1000);
 //setTimeout(applyFiltering, 10000);
+$('.load-more-button').click(function () {
+    setTimeout(applyFiltering, 1500);
+});
 
 
